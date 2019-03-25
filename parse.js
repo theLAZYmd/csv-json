@@ -167,7 +167,6 @@ get mergeIndices() {
     get headers () {
         if (this._headers) return this._headers;
         let headers = this.rawHeaders;
-        console.log(headers);
         headers.reduce((acc, curr, i) => {
             if (acc[curr]) throw new SyntaxError("Duplicate header " + curr + "specified in columns " + (acc[curr] + 1) + " and " + i);
             acc[curr] = i;
@@ -241,7 +240,7 @@ get mergeIndices() {
         if (Array.isArray(typeResolvable)) return 'array';
         if (typeof typeResolvable === 'object') return 'object';
         if (typeof typeResolvable !== 'string') throw new TypeError('Type parameter must be Array or Object');
-        if (!/^(array|object)$/i.test(typeResolvable)) throw 'TypeError: type specified must be "Array" or "Object".';
+        if (!/^(array|object)$/i.test(typeResolvable)) throw new TypeError('type specified must be "Array" or "Object".');
         return this._type = typeResolvable.match(/^(a(?:rray)|o(?:bject))$/i)[1].toLowerCase();
     }
 
@@ -254,6 +253,7 @@ get mergeIndices() {
      * @typedef {function|number|string} indexResolvable
      */
     set index (indexResolvable) {
+        if (typeof indexResolvable === "undefined") return this._index = indexResolvable;
         if (typeof indexResolvable === "function") return this._index = indexResolvable;
         let index = this.resolveIndex(indexResolvable);
         let body = this.body;        
@@ -366,15 +366,23 @@ get mergeIndices() {
      * Private methods called within the instance
      */
 
+    get regex () {
+        if (this._regex) return this._regex;
+        return this._regex = new RegExp(`^${this.escape}*([^${this.escape}]*)${this.escape}*$`);
+    }
+
     /**
      * Removes extraneous escape characters from a given cell (string value)
      * @param {string} str
      * @private
      */
     stripEscape(str) {
-        if (typeof (str) !== "string") return str;
-        let regex = new RegExp(`^${this.escape}*([^${this.escape}]*)${this.escape}*$`)
-        return str.match(regex)[1] || "";
+        try {
+            if (typeof (str) !== "string") return str;
+            return str.match(this.regex)[1] || "";
+        } catch (e) {
+            if (e) throw ([str, this.regex, e]);
+        }
     }
 
     get indices () {
